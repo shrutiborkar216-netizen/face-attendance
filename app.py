@@ -4,31 +4,41 @@ import time
 
 app = Flask(__name__)
 
+# ✅ Upload folder (correct for web)
 UPLOAD_FOLDER = os.path.join('static', 'images')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# ✅ HOME ROUTE (IMPORTANT)
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+
+# ✅ HOME ROUTE
 @app.route('/')
 def home():
     return render_template('register.html')
 
 
-# ✅ REGISTER ROUTE
+# ✅ REGISTER ROUTE (MOBILE SAFE)
 @app.route('/register', methods=['POST'])
 def register():
-    name = request.form['name']
-    roll = request.form['roll']
-    photo = request.files['photo']
+    try:
+        # ✅ Safe data fetching
+        name = request.form.get('name')
+        roll = request.form.get('roll')
+        photo = request.files.get('photo')
 
-    # Clean input
-    name = name.strip().replace(" ", "")
-    roll = roll.strip()
+        # ✅ Validation (important for mobile)
+        if not name or not roll or not photo:
+            return "❌ Please fill all fields and upload photo"
 
-    if photo:
-        # ✅ Auto filename with timestamp
+        # Clean input
+        name = name.strip().replace(" ", "")
+        roll = roll.strip()
+
+        # Create filename
         filename = f"{name}_{roll}_{int(time.time())}.jpg"
-        filepath = os.path.join(UPLOAD_FOLDER, filename)
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
 
+        # Save image
         photo.save(filepath)
 
         return f"""
@@ -36,11 +46,11 @@ def register():
         <a href="/">Go Back</a>
         """
 
-    return "❌ No photo uploaded"
+    except Exception as e:
+        return f"❌ Error: {str(e)}"
 
 
-# ✅ RUN APP
+# ✅ RUN APP (DEPLOYMENT READY)
 if __name__ == "__main__":
-    import os
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
